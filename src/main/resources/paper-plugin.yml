@@ -1,0 +1,7 @@
+name: DeathPlugin
+version: '${version}' 
+main: me.gaminglounge.descriptioneathplugin.DeathPlugin
+description: 
+api-version: '1.21.4' 
+authors: 
+  - "GamingLounge"
