@@ -21,6 +21,7 @@ public final class DeathPlugin extends JavaPlugin {
     public void onEnable() {
         // Plugin startup logic
         sm = new ScoreboardManager();
+        sm.loadScoreboard();
         sm.startCountdownTask();
         listener();
         
@@ -29,7 +30,7 @@ public final class DeathPlugin extends JavaPlugin {
     @Override
     public void onDisable() {
         // Plugin shutdown logic
-
+        sm.saveScoreboard();
     }
 
     private void listener() {

@@ -1,11 +1,6 @@
 package me.gaminglounge.deathPlugin;
 
-import java.io.ByteArrayInputStream;
-import java.io.FileOutputStream;
-import java.io.IOException;
 import java.time.Duration;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -15,10 +10,8 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.Objective;
-import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 
-import com.google.gson.Gson;
 
 import org.bukkit.Chunk;
 
@@ -32,7 +25,7 @@ public class ScoreboardManager {
     private Scoreboard scoreboard;
     HelperMethods hm = new HelperMethods();
 
-    private Scoreboard getScoreboard() {
+    public Scoreboard getScoreboard() {
         if (scoreboard == null) {
             scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
         }
@@ -82,7 +75,7 @@ public class ScoreboardManager {
                                 if (passenger instanceof TextDisplay textDisplay) {
                                     Component currentText = textDisplay.text();
                                     String serialized = mm.serialize(currentText);
-                                    String updated = serialized.replaceAll("\\(\\d{1,2};\\d{1,2};\\d{1,2}\\)", getTimeLeft(entity.getUniqueId()));
+                                    String updated = serialized.replaceAll("\\(\\d{1,2}:\\d{1,2}:\\d{1,2}\\)", getTimeLeft(entity.getUniqueId()));
                                     textDisplay.text(mm.deserialize(updated));
                                 }
                             }
@@ -121,31 +114,19 @@ public class ScoreboardManager {
         long minutes = duration.toMinutesPart();
         long seconds = duration.toSecondsPart();
 
-        String formattedTime = "(" + hours + ";" + minutes + ";" + seconds + ")";
+        String formattedTime = "(" + hours + ":" + minutes + ":" + seconds + ")";
         return formattedTime;
     }
-
-    public void saveScoreboard(Scoreboard scoreboard,Objective objective){
-        Map<String, Integer> dataMap = new HashMap<>();
-
-        for (String entry : scoreboard.getEntries()) {
-            Score score = objective.getScore(entry);
-            if(score.isScoreSet()){
-                dataMap.put(entry, score.getScore());
-            }
-        }
-
-        try(
-            FileOutputStream fos = new FileOutputStream(objective.getName()+"_Scoreboard.json")
-        ){
-        new ByteArrayInputStream(dataMap.toString().getBytes()).transferTo(fos);
-        fos.flush();
-        }catch(IOException e){
-            e.printStackTrace();
-        }
-    }
-
     public void loadScoreboard(){
-
+        hm.loadScoreboard("deathTimer");
+        return;
+    }
+    public void saveScoreboard(){
+        if (scoreboard == null) return;
+        scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        if (getScoreboard().getObjective("deathTimer") == null)return;
+        Objective objective = getScoreboard().getObjective("deathTimer");
+        hm.saveScoreboard(scoreboard, objective);
+        return;
     }
 }

@@ -46,6 +46,7 @@ public class DeathRegister implements Listener {
 
         TextDisplay infoDisplay = player.getWorld().spawn(player.getLocation(), TextDisplay.class);
         headDisplay.addPassenger(infoDisplay);
+        infoDisplay.setViewRange(20);
         infoDisplay.text(mm.deserialize(player.getName() + "\n" +
                 "<red>Death by: " + reason + "\n" +
                 "<blue>Time left: " + DeathPlugin.sm.getTimeLeft(headDisplay.getUniqueId())));

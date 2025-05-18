@@ -18,14 +18,21 @@ import org.bukkit.entity.Entity;
 import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.InventoryHolder;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.scoreboard.Criteria;
+import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
+import org.bukkit.scoreboard.Scoreboard;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
+import net.kyori.adventure.text.minimessage.MiniMessage;
+
 public class HelperMethods {
 
     static InputStream file = DeathPlugin.INSTANCE.getResource("Heads.json");
-
+    MiniMessage mm = MiniMessage.miniMessage();
+    ScoreboardManager sm = new ScoreboardManager();
 
     public Entity getEntityByUUID(UUID uuid) {
         for (World world : Bukkit.getWorlds()) {
@@ -122,5 +129,50 @@ public class HelperMethods {
         if (world == null) return null;
 
         return world.getChunkAt(location.getChunkX(), location.getChunkZ());
+    }
+
+        public void saveScoreboard(Scoreboard scoreboard,Objective objective){
+        Map<String, Integer> dataMap = new HashMap<>();
+
+        for (String entry : scoreboard.getEntries()) {
+            Score score = objective.getScore(entry);
+            if(score.isScoreSet()){
+                dataMap.put(entry, score.getScore());
+            }
+        }
+
+        try(
+            FileOutputStream fos = new FileOutputStream(objective.getName()+"_Scoreboard.json")
+        ){
+        new ByteArrayInputStream(dataMap.toString().getBytes()).transferTo(fos);
+        fos.flush();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void loadScoreboard(String objectiveName){
+
+        InputStream file = DeathPlugin.INSTANCE.getResource(objectiveName+"_Scoreboard.json");
+        Gson gson = new Gson();
+        Map<String, Integer> dataMap = new HashMap<>();
+
+        if (file != null) {
+            try (InputStreamReader reader = new InputStreamReader(file, "utf-8")) {
+                dataMap = gson.fromJson(reader, new TypeToken<Map<String, Integer>>() {}.getType());
+                if (dataMap == null) dataMap = new HashMap<>();
+            }catch(IOException e){
+                e.printStackTrace();
+            }
+        }
+        Scoreboard scoreboard = sm.getScoreboard();
+        if (scoreboard.getObjective("deathTimer") == null) {
+            scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
+        }
+        Objective objective = scoreboard.getObjective(objectiveName);
+        for(String id : dataMap.keySet()){
+            Integer value = dataMap.get(id);
+            objective.getScore(id).setScore(value);
+        }
     }
 }
