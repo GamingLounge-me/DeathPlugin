@@ -9,6 +9,8 @@ public final class DeathPlugin extends JavaPlugin {
 
     public static DeathPlugin INSTANCE;
 
+    public static ScoreboardManager sm = new ScoreboardManager();
+
     @Override
     public void onLoad() {
         INSTANCE = this;
@@ -17,6 +19,7 @@ public final class DeathPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         // Plugin startup logic
+        sm.startCountdownTask();
         listener();
         
     }
