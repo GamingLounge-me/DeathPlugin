@@ -1,7 +1,11 @@
 package me.gaminglounge.deathPlugin;
 
-
+import java.io.ByteArrayInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
 import java.time.Duration;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
@@ -11,7 +15,11 @@ import org.bukkit.entity.Player;
 import org.bukkit.entity.TextDisplay;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.Objective;
+import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
+
+import com.google.gson.Gson;
+
 import org.bukkit.Chunk;
 
 import net.kyori.adventure.text.Component;
@@ -21,8 +29,15 @@ public class ScoreboardManager {
 
     int timeInSec = 3600;
     MiniMessage mm = MiniMessage.miniMessage();
-    Scoreboard scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+    private Scoreboard scoreboard;
     HelperMethods hm = new HelperMethods();
+
+    private Scoreboard getScoreboard() {
+        if (scoreboard == null) {
+            scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        }
+        return scoreboard;
+    }
 
     public Entity getEntityFromUUID(UUID uuid) {
         // Try to get as a player first
@@ -41,30 +56,28 @@ public class ScoreboardManager {
     }
 
     public void addHeadToScoreboard(UUID head) {
-        // Create a new scoreboard
-
-        if (scoreboard.getObjective("deathTimer")== null){
-            scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
+        if (getScoreboard().getObjective("deathTimer") == null) {
+            getScoreboard().registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }
-        Objective deathTimer = scoreboard.getObjective("deathTimer");
+        Objective deathTimer = getScoreboard().getObjective("deathTimer");
         deathTimer.getScore(head.toString()).setScore(timeInSec);
     }
 
     public void startCountdownTask() {
-        Objective objective = scoreboard.getObjective("deathTimer");
-        if (objective == null){
-            scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
+        if (getScoreboard().getObjective("deathTimer") == null) {
+            getScoreboard().registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }
+        Objective objective = getScoreboard().getObjective("deathTimer");
 
         Bukkit.getScheduler().runTaskTimer(
             Bukkit.getPluginManager().getPlugin("DeathPlugin"),
             () -> {
-                for (String entry : scoreboard.getEntries()) {
+                for (String entry : getScoreboard().getEntries()) {
                     int currentScore = objective.getScore(entry).getScore();
                     Entity entity = hm.getEntityByUUID(UUID.fromString(entry));
                     if (currentScore > 0) {
                         objective.getScore(entry).setScore(currentScore - 1);
-                        if(entity != null){
+                        if (entity != null) {
                             for (Entity passenger : entity.getPassengers()) {
                                 if (passenger instanceof TextDisplay textDisplay) {
                                     Component currentText = textDisplay.text();
@@ -72,9 +85,9 @@ public class ScoreboardManager {
                                     String updated = serialized.replaceAll("\\(\\d{1,2};\\d{1,2};\\d{1,2}\\)", getTimeLeft(entity.getUniqueId()));
                                     textDisplay.text(mm.deserialize(updated));
                                 }
-                            }                        
+                            }
                         }
-                    continue;
+                        continue;
                     }
                     if (entity != null) {
                         for (Entity passenger : entity.getPassengers()) {
@@ -82,7 +95,7 @@ public class ScoreboardManager {
                         }
                         objective.getScoreboard().resetScores(entry);
                         hm.remove(entity);
-                    continue;
+                        continue;
                     }
                     Chunk chunk = hm.getChunkFromChunkLocation(hm.removeUUIDFromFile(entry));
                     World world = hm.getEntityByUUID(UUID.fromString(entry)).getWorld();
@@ -96,11 +109,11 @@ public class ScoreboardManager {
         );
     }
 
-    public String getTimeLeft(UUID uuid){
-        Objective objective = scoreboard.getObjective("deathTimer");
-        if (objective == null){
-            scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
+    public String getTimeLeft(UUID uuid) {
+        if (getScoreboard().getObjective("deathTimer") == null) {
+            getScoreboard().registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }
+        Objective objective = getScoreboard().getObjective("deathTimer");
 
         Duration duration = Duration.ofSeconds(objective.getScore(uuid.toString()).getScore());
 
@@ -110,5 +123,29 @@ public class ScoreboardManager {
 
         String formattedTime = "(" + hours + ";" + minutes + ";" + seconds + ")";
         return formattedTime;
+    }
+
+    public void saveScoreboard(Scoreboard scoreboard,Objective objective){
+        Map<String, Integer> dataMap = new HashMap<>();
+
+        for (String entry : scoreboard.getEntries()) {
+            Score score = objective.getScore(entry);
+            if(score.isScoreSet()){
+                dataMap.put(entry, score.getScore());
+            }
+        }
+
+        try(
+            FileOutputStream fos = new FileOutputStream(objective.getName()+"_Scoreboard.json")
+        ){
+        new ByteArrayInputStream(dataMap.toString().getBytes()).transferTo(fos);
+        fos.flush();
+        }catch(IOException e){
+            e.printStackTrace();
+        }
+    }
+
+    public void loadScoreboard(){
+
     }
 }
