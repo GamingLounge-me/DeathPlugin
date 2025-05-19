@@ -11,6 +11,7 @@ public final class DeathPlugin extends JavaPlugin {
 
 
     public static ScoreboardManager sm;
+    public static HelperMethods hm;
 
     @Override
     public void onLoad() {
@@ -20,11 +21,11 @@ public final class DeathPlugin extends JavaPlugin {
     @Override
     public void onEnable() {
         // Plugin startup logic
+        hm = new HelperMethods();
         sm = new ScoreboardManager();
         sm.loadScoreboard();
         sm.startCountdownTask();
         listener();
-        
     }
 
     @Override

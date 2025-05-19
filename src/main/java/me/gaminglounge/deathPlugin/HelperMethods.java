@@ -32,7 +32,6 @@ public class HelperMethods {
 
     static InputStream file = DeathPlugin.INSTANCE.getResource("Heads.json");
     MiniMessage mm = MiniMessage.miniMessage();
-    ScoreboardManager sm = new ScoreboardManager();
 
     public Entity getEntityByUUID(UUID uuid) {
         for (World world : Bukkit.getWorlds()) {
@@ -131,7 +130,7 @@ public class HelperMethods {
         return world.getChunkAt(location.getChunkX(), location.getChunkZ());
     }
 
-        public void saveScoreboard(Scoreboard scoreboard,Objective objective){
+    public void saveScoreboard(Scoreboard scoreboard,Objective objective){
         Map<String, Integer> dataMap = new HashMap<>();
 
         for (String entry : scoreboard.getEntries()) {
@@ -165,7 +164,7 @@ public class HelperMethods {
                 e.printStackTrace();
             }
         }
-        Scoreboard scoreboard = sm.getScoreboard();
+        Scoreboard scoreboard = DeathPlugin.INSTANCE.sm.getScoreboard();
         if (scoreboard.getObjective("deathTimer") == null) {
             scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }

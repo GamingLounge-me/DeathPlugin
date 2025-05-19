@@ -23,7 +23,6 @@ public class ScoreboardManager {
     int timeInSec = 3600;
     MiniMessage mm = MiniMessage.miniMessage();
     private Scoreboard scoreboard;
-    HelperMethods hm = new HelperMethods();
 
     public Scoreboard getScoreboard() {
         if (scoreboard == null) {
@@ -67,7 +66,7 @@ public class ScoreboardManager {
             () -> {
                 for (String entry : getScoreboard().getEntries()) {
                     int currentScore = objective.getScore(entry).getScore();
-                    Entity entity = hm.getEntityByUUID(UUID.fromString(entry));
+                    Entity entity = DeathPlugin.INSTANCE.hm.getEntityByUUID(UUID.fromString(entry));
                     if (currentScore > 0) {
                         objective.getScore(entry).setScore(currentScore - 1);
                         if (entity != null) {
@@ -87,13 +86,13 @@ public class ScoreboardManager {
                             passenger.remove();
                         }
                         objective.getScoreboard().resetScores(entry);
-                        hm.remove(entity);
+                        DeathPlugin.INSTANCE.hm.remove(entity);
                         continue;
                     }
-                    Chunk chunk = hm.getChunkFromChunkLocation(hm.removeUUIDFromFile(entry));
-                    World world = hm.getEntityByUUID(UUID.fromString(entry)).getWorld();
+                    Chunk chunk = DeathPlugin.INSTANCE.hm.getChunkFromChunkLocation(DeathPlugin.INSTANCE.hm.removeUUIDFromFile(entry));
+                    World world = DeathPlugin.INSTANCE.hm.getEntityByUUID(UUID.fromString(entry)).getWorld();
                     world.loadChunk(chunk);
-                    hm.remove(entity);
+                    DeathPlugin.INSTANCE.hm.remove(entity);
                     world.unloadChunk(chunk);
                 }
             },
@@ -118,14 +117,14 @@ public class ScoreboardManager {
         return formattedTime;
     }
     public void loadScoreboard(){
-        hm.loadScoreboard("deathTimer");
+        DeathPlugin.INSTANCE.hm.loadScoreboard("deathTimer");
         return;
     }
     public void saveScoreboard(){
         if (scoreboard == null)return;
         if (getScoreboard().getObjective("deathTimer") == null)return;
         Objective objective = getScoreboard().getObjective("deathTimer");
-        hm.saveScoreboard(getScoreboard(), objective);
+        DeathPlugin.INSTANCE.hm.saveScoreboard(getScoreboard(), objective);
         return;
     }
 }
