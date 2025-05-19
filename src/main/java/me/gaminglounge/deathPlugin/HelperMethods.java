@@ -160,7 +160,7 @@ public class HelperMethods {
         if (file != null) {
             try (InputStreamReader reader = new InputStreamReader(file, "utf-8")) {
                 dataMap = gson.fromJson(reader, new TypeToken<Map<String, Integer>>() {}.getType());
-                if (dataMap == null) dataMap = new HashMap<>();
+                if (dataMap == null) return;
             }catch(IOException e){
                 e.printStackTrace();
             }

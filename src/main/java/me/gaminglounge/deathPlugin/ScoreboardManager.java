@@ -122,11 +122,10 @@ public class ScoreboardManager {
         return;
     }
     public void saveScoreboard(){
-        if (scoreboard == null) return;
-        scoreboard = Bukkit.getScoreboardManager().getNewScoreboard();
+        if (scoreboard == null)return;
         if (getScoreboard().getObjective("deathTimer") == null)return;
         Objective objective = getScoreboard().getObjective("deathTimer");
-        hm.saveScoreboard(scoreboard, objective);
+        hm.saveScoreboard(getScoreboard(), objective);
         return;
     }
 }
