@@ -20,7 +20,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class ScoreboardManager {
 
-    int timeInSec = 3600;
+    int timeInSec = 10;
     MiniMessage mm = MiniMessage.miniMessage();
     private Scoreboard scoreboard;
 

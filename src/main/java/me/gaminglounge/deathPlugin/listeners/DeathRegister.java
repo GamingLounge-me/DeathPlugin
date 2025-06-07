@@ -18,12 +18,14 @@ import me.gaminglounge.deathPlugin.HelperMethods;
 import org.bukkit.Bukkit;
 import org.bukkit.Location;
 import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.block.Block;
 
 import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class DeathRegister implements Listener {
 
+    NamespacedKey key = new NamespacedKey("deathplugin", "death_inventory");
     MiniMessage mm = MiniMessage.miniMessage();
     HelperMethods hm = new HelperMethods();
     Vector north = new Vector(0, 0, -1);
@@ -47,61 +49,61 @@ public class DeathRegister implements Listener {
     }
 
 @EventHandler
-public void onDeath(PlayerDeathEvent event){
-    Player player = event.getPlayer();
-    String reason = mm.serialize(event.deathMessage());
+    public void onDeath(PlayerDeathEvent event){
+        Player player = event.getPlayer();
+        String reason = mm.serialize(event.deathMessage());
 
-    Block currentBlock = player.getLocation().getBlock();
-    int minHeight = currentBlock.getWorld().getMinHeight() + 4;
-    EntityDamageEvent lastDamage = player.getLastDamageCause();
-    Location graveLocation = null;
-    int attempts = 0;
+        Block currentBlock = player.getLocation().getBlock();
+        int minHeight = currentBlock.getWorld().getMinHeight() + 4;
+        EntityDamageEvent lastDamage = player.getLastDamageCause();
+        Location graveLocation = null;
+        int attempts = 0;
 
-    Location defaultGraveLocation = player.getLocation().clone();
-    defaultGraveLocation.setY(Math.max(4, defaultGraveLocation.getY())); // Fallback if needed
+        Location defaultGraveLocation = player.getLocation().clone();
+        defaultGraveLocation.setY(Math.max(4, defaultGraveLocation.getY())); // Fallback if needed
 
 
-    while (attempts++ < 50) {
-        Block belowBlock = currentBlock.getRelative(0, -1, 0);
-        Material currentType = currentBlock.getType();
+        while (attempts++ < 50) {
+            Block belowBlock = currentBlock.getRelative(0, -1, 0);
+            Material currentType = currentBlock.getType();
 
-        // If the current block is lava, move up until out of lava
-        if (currentType == Material.LAVA || currentType == Material.LAVA_CAULDRON) {
-            currentBlock = currentBlock.getRelative(0, 1, 0);
-            continue;
-        }
+            // If the current block is lava, move up until out of lava
+            if (currentType == Material.LAVA || currentType == Material.LAVA_CAULDRON) {
+                currentBlock = currentBlock.getRelative(0, 1, 0);
+                continue;
+            }
 
-        // If suffocated, keep grave where they died
-        if (lastDamage != null && lastDamage.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION) {
-            graveLocation = player.getLocation();
+            // If suffocated, keep grave where they died
+            if (lastDamage != null && lastDamage.getCause() == EntityDamageEvent.DamageCause.SUFFOCATION) {
+                graveLocation = player.getLocation();
+                break;
+            }
+
+            // If we find solid ground below and air at current — place grave here
+            if (
+                isStandable(currentType) &&
+                currentBlock.getRelative(0, 1, 0).getType() == Material.AIR
+            ) {
+                graveLocation = currentBlock.getLocation().add(0, 1, 0); // Place grave just above current
+                break;
+            }
+
+            // If still above min height, keep going down
+            if (currentBlock.getY() > minHeight) {
+                currentBlock = belowBlock;
+                continue;
+            }
+
+            // If we hit min height and nothing worked, place grave there
+            graveLocation = new Location(player.getWorld(), currentBlock.getX(), minHeight, currentBlock.getZ());
             break;
         }
 
-        // If we find solid ground below and air at current — place grave here
-        if (
-            isStandable(currentType) &&
-            currentBlock.getRelative(0, 1, 0).getType() == Material.AIR
-        ) {
-            graveLocation = currentBlock.getLocation().add(0, 1, 0); // Place grave just above current
-            break;
+            // Fallback if nothing valid found
+        if (graveLocation == null) {
+            graveLocation = defaultGraveLocation;
+            Bukkit.getLogger().warning("Grave fallback used at: " + graveLocation);
         }
-
-        // If still above min height, keep going down
-        if (currentBlock.getY() > minHeight) {
-            currentBlock = belowBlock;
-            continue;
-        }
-
-        // If we hit min height and nothing worked, place grave there
-        graveLocation = new Location(player.getWorld(), currentBlock.getX(), minHeight, currentBlock.getZ());
-        break;
-    }
-
-    // Fallback if nothing valid found
-    if (graveLocation == null) {
-        graveLocation = defaultGraveLocation;
-        Bukkit.getLogger().warning("Grave fallback used at: " + graveLocation);
-    }
 
 
         // Now use graveLocation for the rest of your logic
@@ -118,6 +120,8 @@ public void onDeath(PlayerDeathEvent event){
         headDisplay.setInvulnerable(true);
         headDisplay.getEquipment().setHelmet(head);
 
+        hm.copyInventory(player, headDisplay, key);
+
         DeathPlugin.sm.addHeadToScoreboard(headDisplay.getUniqueId());
         hm.addUUIDToFile(headDisplay.getUniqueId().toString(), hm.getChunkLocationFromChunk(headDisplay.getChunk()));
 
@@ -126,7 +130,10 @@ public void onDeath(PlayerDeathEvent event){
         infoDisplay.setViewRange(20);
         infoDisplay.setBillboard(Billboard.VERTICAL);
         infoDisplay.text(mm.deserialize(player.getName() + "\n" +
-                "<red>"+ reason + "\n" +
-                "<blue>Time left: " + DeathPlugin.sm.getTimeLeft(headDisplay.getUniqueId())));
+        "<red>"+ reason + "\n" +
+        "<blue>Time left: " + DeathPlugin.sm.getTimeLeft(headDisplay.getUniqueId())));
+
+        //stop the player from dropping Items
+        event.getDrops().clear();
     }
 }

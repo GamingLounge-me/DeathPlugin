@@ -1,10 +1,15 @@
 package me.gaminglounge.deathPlugin;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
@@ -14,17 +19,18 @@ import javax.annotation.Nullable;
 
 import org.bukkit.Bukkit;
 import org.bukkit.Chunk;
-import org.bukkit.Material;
+import org.bukkit.NamespacedKey;
 import org.bukkit.World;
-import org.bukkit.block.Block;
 import org.bukkit.entity.Entity;
-import org.bukkit.inventory.Inventory;
-import org.bukkit.inventory.InventoryHolder;
+import org.bukkit.entity.Player;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
+
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
@@ -33,6 +39,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class HelperMethods {
 
+    NamespacedKey key = new NamespacedKey("deathplugin", "death_inventory");
     static InputStream file = DeathPlugin.INSTANCE.getResource("Heads.json");
     MiniMessage mm = MiniMessage.miniMessage();
 
@@ -47,17 +54,17 @@ public class HelperMethods {
         return null;
     }
 
+
+    //This is the part, where we have to load the inventorry and drop it.
     public void remove(Entity entity){
-        if(entity instanceof InventoryHolder iH){
-            Inventory inventory = iH.getInventory();
-            for(ItemStack item: inventory.getContents()){
-                if(item != null){
-                    entity.getWorld().dropItemNaturally(entity.getLocation(), item);
-                }
+        ItemStack[] items = retrieveInventory(entity, key);
+        for (ItemStack item : items) {
+            if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                entity.getWorld().dropItemNaturally(entity.getLocation(), item);
             }
         }
         removeUUIDFromFile(entity.getUniqueId().toString());
-        remove(entity);
+        entity.remove();
     }
 
     public static void addUUIDToFile(String uuid, ChunkLocation chunk) {
@@ -181,6 +188,87 @@ public class HelperMethods {
         for(String id : dataMap.keySet()){
             Integer value = dataMap.get(id);
             objective.getScore(id).setScore(value);
+        }
+    }
+
+    //https://docs.papermc.io/paper/dev/custom-inventory-holder/
+    // Serialize ItemStack array to Base64 using DataOutputStream and serializeAsBytes
+    public static String serializeItems(ItemStack[] items) {
+        try {
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            DataOutputStream out = new DataOutputStream(baos);
+            out.writeInt(items.length); // Save array length
+            int nonAirCount = 0;
+            for (ItemStack item : items) {
+                if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                    nonAirCount++;
+                }
+            }
+            out.writeInt(nonAirCount); // Save number of non-air items
+            for (int i = 0; i < items.length; i++) {
+                ItemStack item = items[i];
+                if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                    out.writeInt(i); // Save slot index
+                    byte[] data = item.serializeAsBytes();
+                    out.writeInt(data.length);
+                    out.write(data);
+                }
+            }
+            out.close();
+            return Base64.getEncoder().encodeToString(baos.toByteArray());
+        } catch (IOException e) {
+            e.printStackTrace();
+            return "";
+        }
+    }
+
+
+    //This method is to copy the inventorry from the given Player to the given Entity using PDC.
+    public void copyInventory (Player player, Entity target, NamespacedKey key) {
+        target.getPersistentDataContainer().set(
+            key,
+            PersistentDataType.STRING,
+            serializeItems(player.getInventory().getContents())
+        );
+    }
+
+    // Deserialize ItemStack array from Base64 using DataInputStream and deserializeBytes
+    public static ItemStack[] deserializeItems(String data) {
+        try {
+            byte[] bytes = Base64.getDecoder().decode(data);
+            ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
+            DataInputStream in = new DataInputStream(bais);
+            int length = in.readInt();
+            ItemStack[] items = new ItemStack[length];
+            int nonAirCount = in.readInt();
+            for (int j = 0; j < nonAirCount; j++) {
+                int i = in.readInt(); // Slot index
+                int itemLen = in.readInt();
+                byte[] itemBytes = new byte[itemLen];
+                in.readFully(itemBytes);
+                items[i] = ItemStack.deserializeBytes(itemBytes);
+            }
+            in.close();
+            return items;
+        } catch (IOException e) {
+            e.printStackTrace();
+            return new ItemStack[0];
+        }
+    }
+    //This method returns the Itemstack from the inventory.
+    public ItemStack[] retrieveInventory (Entity entity, NamespacedKey key) {
+    PersistentDataContainer container = entity.getPersistentDataContainer();
+    
+    String data = container.get(key, PersistentDataType.STRING);
+        if (data == null || data.isEmpty()) {
+            return new ItemStack[0]; // Or null, depending on your use case
+        }
+
+        try {
+            return deserializeItems(data); // Your custom method from earlier
+        } catch (Exception e) {
+            e.printStackTrace();
+            return new ItemStack[0];
         }
     }
 }
