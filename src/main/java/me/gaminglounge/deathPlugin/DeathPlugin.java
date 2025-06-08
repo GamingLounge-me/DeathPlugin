@@ -4,6 +4,7 @@ import org.bukkit.plugin.PluginManager;
 import org.bukkit.plugin.java.JavaPlugin;
 
 import me.gaminglounge.deathPlugin.listeners.DeathRegister;
+import me.gaminglounge.deathPlugin.listeners.EntityInteractListener;
 
 public final class DeathPlugin extends JavaPlugin {
 
@@ -38,5 +39,6 @@ public final class DeathPlugin extends JavaPlugin {
         PluginManager pm = getServer().getPluginManager();
 
         pm.registerEvents(new DeathRegister(), this);
+        pm.registerEvents(new EntityInteractListener(), this);
     }
 }

@@ -20,7 +20,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class ScoreboardManager {
 
-    int timeInSec = 10;
+    int timeInSec = 30;
     MiniMessage mm = MiniMessage.miniMessage();
     private Scoreboard scoreboard;
 
@@ -82,10 +82,6 @@ public class ScoreboardManager {
                         continue;
                     }
                     if (entity != null) {
-                        for (Entity passenger : entity.getPassengers()) {
-                            passenger.remove();
-                        }
-                        objective.getScoreboard().resetScores(entry);
                         DeathPlugin.INSTANCE.hm.remove(entity);
                         continue;
                     }

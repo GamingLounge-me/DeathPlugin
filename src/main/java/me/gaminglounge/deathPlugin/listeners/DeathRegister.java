@@ -27,7 +27,7 @@ public class DeathRegister implements Listener {
 
     NamespacedKey key = new NamespacedKey("deathplugin", "death_inventory");
     MiniMessage mm = MiniMessage.miniMessage();
-    HelperMethods hm = new HelperMethods();
+    HelperMethods hm = DeathPlugin.hm;
     Vector north = new Vector(0, 0, -1);
 
     private boolean isStandable(Material type) {
@@ -51,6 +51,9 @@ public class DeathRegister implements Listener {
 @EventHandler
     public void onDeath(PlayerDeathEvent event){
         Player player = event.getPlayer();
+
+        if (player.getInventory().isEmpty() & event.getDroppedExp()<= 1)return;
+
         String reason = mm.serialize(event.deathMessage());
 
         Block currentBlock = player.getLocation().getBlock();

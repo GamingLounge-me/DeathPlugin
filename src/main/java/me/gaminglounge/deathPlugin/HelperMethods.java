@@ -23,7 +23,9 @@ import org.bukkit.NamespacedKey;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
+import org.bukkit.inventory.Inventory;
 import org.bukkit.inventory.ItemStack;
+import org.bukkit.inventory.PlayerInventory;
 import org.bukkit.persistence.PersistentDataContainer;
 import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.scoreboard.Criteria;
@@ -60,10 +62,20 @@ public class HelperMethods {
         ItemStack[] items = retrieveInventory(entity, key);
         for (ItemStack item : items) {
             if (item != null && item.getType() != org.bukkit.Material.AIR) {
-                entity.getWorld().dropItemNaturally(entity.getLocation(), item);
+                entity.getWorld().dropItemNaturally(entity.getLocation().add(0, 1.9375, 0), item);
             }
         }
         removeUUIDFromFile(entity.getUniqueId().toString());
+
+        // Remove from scoreboard
+        Scoreboard scoreboard = DeathPlugin.INSTANCE.sm.getScoreboard();
+        Objective objective = scoreboard.getObjective("deathTimer");
+        if (objective != null) {
+            scoreboard.resetScores(entity.getUniqueId().toString());
+        }
+        for (Entity passenger : entity.getPassengers()) {
+            passenger.remove();
+        }
         entity.remove();
     }
 
@@ -192,7 +204,13 @@ public class HelperMethods {
     }
 
     //https://docs.papermc.io/paper/dev/custom-inventory-holder/
-    // Serialize ItemStack array to Base64 using DataOutputStream and serializeAsBytes
+    // Serialize main, armor, and offhand items
+    public static String serializeItems(PlayerInventory inv) {
+        ItemStack[] contents = inv.getContents(); // includes main, armor, and offhand in modern Paper
+        return serializeItems(contents);
+    }
+
+    // Overload for ItemStack[]
     public static String serializeItems(ItemStack[] items) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -228,11 +246,11 @@ public class HelperMethods {
         target.getPersistentDataContainer().set(
             key,
             PersistentDataType.STRING,
-            serializeItems(player.getInventory().getContents())
+            serializeItems(player.getInventory()) // Pass PlayerInventory, not just getContents()
         );
     }
 
-    // Deserialize ItemStack array from Base64 using DataInputStream and deserializeBytes
+    // Deserialize to full inventory (main, armor, offhand)
     public static ItemStack[] deserializeItems(String data) {
         try {
             byte[] bytes = Base64.getDecoder().decode(data);
@@ -270,5 +288,34 @@ public class HelperMethods {
             e.printStackTrace();
             return new ItemStack[0];
         }
+    }
+
+    
+    // This method opens a GUI showing the saved inventory to the specified player
+    public void openSavedInventoryGUI(Player viewer, Entity source, NamespacedKey key) {
+        if (viewer == null || source == null || key == null) return;
+
+        ItemStack[] savedItems = retrieveInventory(source, key);
+
+        if (savedItems.length == 0) {
+            viewer.sendMessage("§cNo saved inventory found.");
+            return;
+        }
+
+        // Calculate inventory size: round up to the next multiple of 9, max 54
+        int rows = (int) Math.ceil(savedItems.length / 9.0);
+        int size = Math.min(rows * 9, 54);
+
+        Inventory gui = Bukkit.createInventory(
+            new SavedInventoryHolder(source.getUniqueId()),
+            size,
+            net.kyori.adventure.text.Component.text("§8Saved Inventory")
+        );
+
+        for (int i = 0; i < savedItems.length && i < size; i++) {
+            gui.setItem(i, savedItems[i]);
+        }
+
+        viewer.openInventory(gui);
     }
 }
