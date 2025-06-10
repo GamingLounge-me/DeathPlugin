@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.UUID;
 
 import org.bukkit.Bukkit;
+import org.bukkit.Chunk;
 import org.bukkit.World;
 import org.bukkit.entity.Entity;
 import org.bukkit.entity.Player;
@@ -11,9 +12,6 @@ import org.bukkit.entity.TextDisplay;
 import org.bukkit.scoreboard.Criteria;
 import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Scoreboard;
-
-
-import org.bukkit.Chunk;
 
 import net.kyori.adventure.text.Component;
 import net.kyori.adventure.text.minimessage.MiniMessage;
@@ -85,11 +83,28 @@ public class ScoreboardManager {
                         DeathPlugin.INSTANCE.hm.remove(entity);
                         continue;
                     }
-                    Chunk chunk = DeathPlugin.INSTANCE.hm.getChunkFromChunkLocation(DeathPlugin.INSTANCE.hm.removeUUIDFromFile(entry));
-                    World world = DeathPlugin.INSTANCE.hm.getEntityByUUID(UUID.fromString(entry)).getWorld();
-                    world.loadChunk(chunk);
-                    DeathPlugin.INSTANCE.hm.remove(entity);
-                    world.unloadChunk(chunk);
+                    // Entity not found, try to load the chunk and check again
+                    ChunkLocation location = DeathPlugin.INSTANCE.hm.removeUUIDFromFile(entry);
+                    if (location != null) {
+                        World world = Bukkit.getWorld(location.getWorldName());
+                        if (world != null) {
+                            Chunk chunk = world.getChunkAt(location.getChunkX(), location.getChunkZ());
+                            if (!chunk.isLoaded()) {
+                                world.loadChunk(chunk);
+                            }
+                            // Try to find the entity again after loading the chunk
+                            entity = DeathPlugin.INSTANCE.hm.getEntityByUUID(UUID.fromString(entry));
+                            if (entity != null) {
+                                DeathPlugin.INSTANCE.hm.remove(entity);
+                                world.unloadChunk(chunk);
+                                continue;
+                            }
+                            // If still not found, now remove from file/scoreboard
+                            getScoreboard().resetScores(entry);
+                            // Optionally log cleanup
+                            DeathPlugin.INSTANCE.getLogger().info("Cleaned up orphan grave entry: " + entry);
+                        }
+                    }
                 }
             },
             20L, // initial delay (1 second)

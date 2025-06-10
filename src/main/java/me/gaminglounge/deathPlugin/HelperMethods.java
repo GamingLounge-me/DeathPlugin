@@ -41,7 +41,8 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class HelperMethods {
 
-    NamespacedKey key = new NamespacedKey("deathplugin", "death_inventory");
+    NamespacedKey inventory_key = new NamespacedKey("deathplugin", "death_inventory");
+    NamespacedKey xp_key = new NamespacedKey("deathplugin", "death_xp");
     static InputStream file = DeathPlugin.INSTANCE.getResource("Heads.json");
     MiniMessage mm = MiniMessage.miniMessage();
 
@@ -59,20 +60,21 @@ public class HelperMethods {
 
     //This is the part, where we have to load the inventorry and drop it.
     public void remove(Entity entity){
-        ItemStack[] items = retrieveInventory(entity, key);
+        ItemStack[] items = retrieveInventory(entity, inventory_key);
         for (ItemStack item : items) {
             if (item != null && item.getType() != org.bukkit.Material.AIR) {
                 entity.getWorld().dropItemNaturally(entity.getLocation().add(0, 1.9375, 0), item);
             }
         }
+        Integer xp = entity.getPersistentDataContainer().get(xp_key, PersistentDataType.INTEGER);
+        if (xp != null && xp > 0) {
+            entity.getWorld().spawn(entity.getLocation().add(0, 1.9375, 0), org.bukkit.entity.ExperienceOrb.class, orb -> orb.setExperience(xp));
+        }
         removeUUIDFromFile(entity.getUniqueId().toString());
 
         // Remove from scoreboard
         Scoreboard scoreboard = DeathPlugin.INSTANCE.sm.getScoreboard();
-        Objective objective = scoreboard.getObjective("deathTimer");
-        if (objective != null) {
-            scoreboard.resetScores(entity.getUniqueId().toString());
-        }
+        scoreboard.resetScores(entity.getUniqueId().toString());
         for (Entity passenger : entity.getPassengers()) {
             passenger.remove();
         }
@@ -242,9 +244,9 @@ public class HelperMethods {
 
 
     //This method is to copy the inventorry from the given Player to the given Entity using PDC.
-    public void copyInventory (Player player, Entity target, NamespacedKey key) {
+    public void copyInventory (Player player, Entity target, NamespacedKey inventory_key) {
         target.getPersistentDataContainer().set(
-            key,
+            inventory_key,
             PersistentDataType.STRING,
             serializeItems(player.getInventory()) // Pass PlayerInventory, not just getContents()
         );
@@ -274,10 +276,10 @@ public class HelperMethods {
         }
     }
     //This method returns the Itemstack from the inventory.
-    public ItemStack[] retrieveInventory (Entity entity, NamespacedKey key) {
+    public ItemStack[] retrieveInventory (Entity entity, NamespacedKey inventory_key) {
     PersistentDataContainer container = entity.getPersistentDataContainer();
     
-    String data = container.get(key, PersistentDataType.STRING);
+    String data = container.get(inventory_key, PersistentDataType.STRING);
         if (data == null || data.isEmpty()) {
             return new ItemStack[0]; // Or null, depending on your use case
         }
@@ -292,10 +294,10 @@ public class HelperMethods {
 
     
     // This method opens a GUI showing the saved inventory to the specified player
-    public void openSavedInventoryGUI(Player viewer, Entity source, NamespacedKey key) {
-        if (viewer == null || source == null || key == null) return;
+    public void openSavedInventoryGUI(Player viewer, Entity source, NamespacedKey inventory_key) {
+        if (viewer == null || source == null || inventory_key == null) return;
 
-        ItemStack[] savedItems = retrieveInventory(source, key);
+        ItemStack[] savedItems = retrieveInventory(source, inventory_key);
 
         if (savedItems.length == 0) {
             viewer.sendMessage("§cNo saved inventory found.");
@@ -317,5 +319,14 @@ public class HelperMethods {
         }
 
         viewer.openInventory(gui);
+    }
+
+        //This method is to save the player xp in the entity's PDC.
+    public void saveXP (Integer xp, Entity target, NamespacedKey xp_key) {
+        target.getPersistentDataContainer().set(
+            xp_key,
+            PersistentDataType.INTEGER,
+            xp
+        );
     }
 }

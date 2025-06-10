@@ -26,6 +26,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 public class DeathRegister implements Listener {
 
     NamespacedKey key = new NamespacedKey("deathplugin", "death_inventory");
+    NamespacedKey xp_key = new NamespacedKey("deathplugin", "death_xp");
     MiniMessage mm = MiniMessage.miniMessage();
     HelperMethods hm = DeathPlugin.hm;
     Vector north = new Vector(0, 0, -1);
@@ -124,6 +125,7 @@ public class DeathRegister implements Listener {
         headDisplay.getEquipment().setHelmet(head);
 
         hm.copyInventory(player, headDisplay, key);
+        hm.saveXP(event.getDroppedExp(), headDisplay, xp_key);
 
         DeathPlugin.sm.addHeadToScoreboard(headDisplay.getUniqueId());
         hm.addUUIDToFile(headDisplay.getUniqueId().toString(), hm.getChunkLocationFromChunk(headDisplay.getChunk()));
@@ -138,5 +140,6 @@ public class DeathRegister implements Listener {
 
         //stop the player from dropping Items
         event.getDrops().clear();
+        event.setDroppedExp(0);
     }
 }
