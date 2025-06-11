@@ -111,7 +111,7 @@ public class DeathRegister implements Listener {
 
 
         // Now use graveLocation for the rest of your logic
-        ArmorStand headDisplay = player.getWorld().spawn(graveLocation.add(0, -1.4375, 0), ArmorStand.class);
+        ArmorStand headDisplay = player.getWorld().spawn(graveLocation.add(0.5, -1.4375, 0.5), ArmorStand.class);
         ItemStack head = new ItemStack(Material.PLAYER_HEAD);
         SkullMeta skullMeta = (SkullMeta) head.getItemMeta();
         skullMeta.setOwningPlayer(player);

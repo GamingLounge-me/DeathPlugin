@@ -304,6 +304,19 @@ public class HelperMethods {
             return;
         }
 
+        // Try to get the player's name from the TextDisplay passenger
+        String playerName = "Saved Inventory";
+        for (Entity passenger : source.getPassengers()) {
+            if (passenger instanceof org.bukkit.entity.TextDisplay textDisplay) {
+                String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(textDisplay.text());
+                // Extract the first line (player name)
+                if (text != null && !text.isEmpty()) {
+                    playerName = text.split("\n")[0];
+                }
+                break;
+            }
+        }
+
         // Calculate inventory size: round up to the next multiple of 9, max 54
         int rows = (int) Math.ceil(savedItems.length / 9.0);
         int size = Math.min(rows * 9, 54);
@@ -311,7 +324,7 @@ public class HelperMethods {
         Inventory gui = Bukkit.createInventory(
             new SavedInventoryHolder(source.getUniqueId()),
             size,
-            net.kyori.adventure.text.Component.text("§8Saved Inventory")
+            mm.deserialize(playerName + "'s <bold><gradient:#de000b:#d94e50>Inventorry</gradient></bold>")
         );
 
         for (int i = 0; i < savedItems.length && i < size; i++) {
