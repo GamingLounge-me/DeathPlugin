@@ -8,7 +8,6 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.io.InputStream;
 import java.util.Base64;
 import java.util.HashMap;
 import java.util.Map;
@@ -33,7 +32,6 @@ import org.bukkit.scoreboard.Objective;
 import org.bukkit.scoreboard.Score;
 import org.bukkit.scoreboard.Scoreboard;
 
-
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
 
@@ -43,7 +41,6 @@ public class HelperMethods {
 
     NamespacedKey inventory_key = new NamespacedKey("deathplugin", "death_inventory");
     NamespacedKey xp_key = new NamespacedKey("deathplugin", "death_xp");
-    static InputStream file = DeathPlugin.INSTANCE.getResource("Heads.json");
     MiniMessage mm = MiniMessage.miniMessage();
 
     public Entity getEntityByUUID(UUID uuid) {
@@ -96,7 +93,7 @@ public class HelperMethods {
                 dataMap = gson.fromJson(reader, new TypeToken<Map<String, ChunkLocation>>() {}.getType());
                 if (dataMap == null) dataMap = new HashMap<>();
             } catch(IOException e){
-                e.printStackTrace();
+                DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while reading Heads.json", e);
             }
         }
 
@@ -107,7 +104,7 @@ public class HelperMethods {
         try (FileWriter writer = new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8)) {
             gson.toJson(dataMap, writer);
         } catch(IOException e){
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while writing to Heads.json", e);
         }
     }
 
@@ -128,7 +125,7 @@ public class HelperMethods {
                 dataMap = gson.fromJson(reader, new TypeToken<Map<String, ChunkLocation>>() {}.getType());
                 if (dataMap == null) dataMap = new HashMap<>();
             } catch(IOException e){
-                e.printStackTrace();
+                DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while reading Heads.json", e);
             }
         }
 
@@ -140,7 +137,7 @@ public class HelperMethods {
         try (FileWriter writer = new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8)) {
             gson.toJson(dataMap, writer);
         } catch(IOException e){
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while writing to Heads.json", e);
         }
         return removedChunk;
     }
@@ -173,7 +170,7 @@ public class HelperMethods {
         try (FileWriter writer = new FileWriter(file, java.nio.charset.StandardCharsets.UTF_8)) {
             gson.toJson(dataMap, writer);
         } catch(IOException e){
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while writing to Scoreboard.json", e);
         }
     }
 
@@ -190,7 +187,7 @@ public class HelperMethods {
                 DeathPlugin.INSTANCE.getLogger().log(Level.WARNING, "At this point the map should be loaded");
                 DeathPlugin.INSTANCE.getLogger().log(Level.WARNING, dataMap.toString());
             } catch(IOException e) {
-                e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error while reading Scoreboard.json", e);
             }
         }
 
@@ -199,9 +196,13 @@ public class HelperMethods {
             scoreboard.registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }
         Objective objective = scoreboard.getObjective(objectiveName);
-        for(String id : dataMap.keySet()){
-            Integer value = dataMap.get(id);
-            objective.getScore(id).setScore(value);
+        if (objective != null) {
+            for(String id : dataMap.keySet()){
+                Integer value = dataMap.get(id);
+                objective.getScore(id).setScore(value);
+            }
+        } else {
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Objective ''{0}'' not found on scoreboard.", objectiveName);
         }
     }
 
@@ -216,28 +217,28 @@ public class HelperMethods {
     public static String serializeItems(ItemStack[] items) {
         try {
             ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            DataOutputStream out = new DataOutputStream(baos);
-            out.writeInt(items.length); // Save array length
-            int nonAirCount = 0;
-            for (ItemStack item : items) {
-                if (item != null && item.getType() != org.bukkit.Material.AIR) {
-                    nonAirCount++;
+            try (DataOutputStream out = new DataOutputStream(baos)) {
+                out.writeInt(items.length); // Save array length
+                int nonAirCount = 0;
+                for (ItemStack item : items) {
+                    if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                        nonAirCount++;
+                    }
                 }
-            }
-            out.writeInt(nonAirCount); // Save number of non-air items
-            for (int i = 0; i < items.length; i++) {
-                ItemStack item = items[i];
-                if (item != null && item.getType() != org.bukkit.Material.AIR) {
-                    out.writeInt(i); // Save slot index
-                    byte[] data = item.serializeAsBytes();
-                    out.writeInt(data.length);
-                    out.write(data);
+                out.writeInt(nonAirCount); // Save number of non-air items
+                for (int i = 0; i < items.length; i++) {
+                    ItemStack item = items[i];
+                    if (item != null && item.getType() != org.bukkit.Material.AIR) {
+                        out.writeInt(i); // Save slot index
+                        byte[] data = item.serializeAsBytes();
+                        out.writeInt(data.length);
+                        out.write(data);
+                    }
                 }
-            }
-            out.close();
+            } // Save array length
             return Base64.getEncoder().encodeToString(baos.toByteArray());
         } catch (IOException e) {
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error during item serialization", e);
             return "";
         }
     }
@@ -257,21 +258,22 @@ public class HelperMethods {
         try {
             byte[] bytes = Base64.getDecoder().decode(data);
             ByteArrayInputStream bais = new ByteArrayInputStream(bytes);
-            DataInputStream in = new DataInputStream(bais);
-            int length = in.readInt();
-            ItemStack[] items = new ItemStack[length];
-            int nonAirCount = in.readInt();
-            for (int j = 0; j < nonAirCount; j++) {
-                int i = in.readInt(); // Slot index
-                int itemLen = in.readInt();
-                byte[] itemBytes = new byte[itemLen];
-                in.readFully(itemBytes);
-                items[i] = ItemStack.deserializeBytes(itemBytes);
+            ItemStack[] items;
+            try (DataInputStream in = new DataInputStream(bais)) {
+                int length = in.readInt();
+                items = new ItemStack[length];
+                int nonAirCount = in.readInt();
+                for (int j = 0; j < nonAirCount; j++) {
+                    int i = in.readInt(); // Slot index
+                    int itemLen = in.readInt();
+                    byte[] itemBytes = new byte[itemLen];
+                    in.readFully(itemBytes);
+                    items[i] = ItemStack.deserializeBytes(itemBytes);
+                }
             }
-            in.close();
             return items;
         } catch (IOException e) {
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error during item deserialization", e);
             return new ItemStack[0];
         }
     }
@@ -287,7 +289,7 @@ public class HelperMethods {
         try {
             return deserializeItems(data); // Your custom method from earlier
         } catch (Exception e) {
-            e.printStackTrace();
+            DeathPlugin.INSTANCE.getLogger().log(Level.SEVERE, "Error during item deserialization", e);
             return new ItemStack[0];
         }
     }
@@ -310,7 +312,7 @@ public class HelperMethods {
             if (passenger instanceof org.bukkit.entity.TextDisplay textDisplay) {
                 String text = net.kyori.adventure.text.serializer.plain.PlainTextComponentSerializer.plainText().serialize(textDisplay.text());
                 // Extract the first line (player name)
-                if (text != null && !text.isEmpty()) {
+                if (!text.isEmpty()) {
                     playerName = text.split("\n")[0];
                 }
                 break;

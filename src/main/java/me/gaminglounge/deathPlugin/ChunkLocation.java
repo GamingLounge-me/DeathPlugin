@@ -1,9 +1,9 @@
 package me.gaminglounge.deathPlugin;
 
 public class ChunkLocation {
-    private int chunkX;
-    private int chunkZ;
-    private String worldName;
+    private final int chunkX;
+    private final int chunkZ;
+    private final String worldName;
 
     public ChunkLocation(int chunkX, int chunkZ, String worldName) {
         this.chunkX = chunkX;

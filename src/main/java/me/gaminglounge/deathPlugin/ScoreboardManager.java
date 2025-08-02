@@ -18,7 +18,7 @@ import net.kyori.adventure.text.minimessage.MiniMessage;
 
 public class ScoreboardManager {
 
-    int timeInSec = 30;
+    int timeInSec = 3600;
     MiniMessage mm = MiniMessage.miniMessage();
     private Scoreboard scoreboard;
 
@@ -50,7 +50,9 @@ public class ScoreboardManager {
             getScoreboard().registerNewObjective("deathTimer", Criteria.DUMMY, mm.deserialize("Death Timer"));
         }
         Objective deathTimer = getScoreboard().getObjective("deathTimer");
-        deathTimer.getScore(head.toString()).setScore(timeInSec);
+        if (deathTimer != null) {
+            deathTimer.getScore(head.toString()).setScore(timeInSec);
+        }
     }
 
     public void startCountdownTask() {
@@ -129,13 +131,11 @@ public class ScoreboardManager {
     }
     public void loadScoreboard(){
         DeathPlugin.INSTANCE.hm.loadScoreboard("deathTimer");
-        return;
     }
     public void saveScoreboard(){
         if (scoreboard == null)return;
         if (getScoreboard().getObjective("deathTimer") == null)return;
         Objective objective = getScoreboard().getObjective("deathTimer");
         DeathPlugin.INSTANCE.hm.saveScoreboard(getScoreboard(), objective);
-        return;
     }
 }
