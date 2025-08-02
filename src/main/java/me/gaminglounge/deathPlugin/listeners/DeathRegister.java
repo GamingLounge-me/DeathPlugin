@@ -96,7 +96,9 @@ public class DeathRegister implements Listener {
             if (
                 isStandable(currentType) &&
                 (currentBlock.getRelative(0, 1, 0).getType() == Material.AIR
-                || currentBlock.getRelative(0, 1, 0).getType() == Material.WATER)
+                || currentBlock.getRelative(0, 1, 0).getType() == Material.WATER
+                || currentBlock.getRelative(0, 1, 0).getType() == Material.SEA_PICKLE
+                || currentBlock.getRelative(0, 1, 0).getType().isSolid() == false)
             ) {
                 graveLocation = currentBlock.getLocation().add(0, 1, 0); // Place grave just above current
                 break;
@@ -109,7 +111,7 @@ public class DeathRegister implements Listener {
             }
 
             // If we hit min height and nothing worked, place grave there
-            graveLocation = new Location(player.getWorld(), currentBlock.getX(), minHeight, currentBlock.getZ());
+            graveLocation = new Location(player.getWorld(), currentBlock.getX() + 0.5, minHeight, currentBlock.getZ() + 0.5);
             break;
         }
 
